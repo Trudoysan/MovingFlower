@@ -1,17 +1,20 @@
 #include <Servo.h>
 #include <Adafruit_NeoPixel.h>
+static const int leafs = 8;
+static const int ledInLeaf = 4;
 
-static const int servoPin1 = 17;
-static const int servoPin2 = 16;
-
+static const int servoPin[leafs] = { 16, 17, 5, 18, 19, 21, 3, 1 };
+static const int touchPin[leafs] = { T2, T3, T4, T5, T6, T7, T8, T9 };
 static const int ledPin = 22;
 
-Servo servo1;
-Servo servo2;
+Servo servo[leafs];
+int touchVal[leafs] = { 0 };
+int up[leafs] = { 90, 90, 90, 90, 90, 90, 90, 90 };
+int upNow[leafs];
+int upTarget[leafs];
+static const int moveAngle = 45;
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(5, ledPin, NEO_GRB + NEO_KHZ800);
-int touchVal = 0;
-int up;
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(leafs * ledInLeaf, ledPin, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   Serial.begin(115200);
@@ -19,70 +22,51 @@ void setup() {
   strip.begin();
   strip.setBrightness(50);
   strip.show();  // Initialize all pixels to 'off'
-  for (int pokus = 0; pokus < 20; pokus++) {
-    touchVal += touchRead(T3);
-    Serial.println(touchVal);
+
+  for (int pokus = 0; pokus < 10; pokus++) {
+    for (int i = 0; i < leafs; i++)
+      touchVal[i] += touchRead(touchPin[i]);
+    //Serial.println(touchVal);
     delay(100);
   }
-  touchVal /= 20;
-  Serial.print("Done ");
-  Serial.println(touchVal);
-  delay(200);
-  servo1.attach(servoPin1);
-  servo2.attach(servoPin2);
-  delay(200);
+  for (int i = 0; i < leafs; i++)
+    touchVal[i] /= 10;
 
-  servo1.write(90);
-  servo2.write(150);
-  up = 150;
+  //Serial.print("Done ");
+  //Serial.println(touchVal);
+  delay(200);
+  for (int i = 0; i < leafs; i++)
+    servo[i].attach(servoPin[i]);
+  delay(200);
+  for (int i = 0; i < leafs; i++) {
+    servo[i].write(up[i]);
+    upNow[i] = up[i];
+    upTarget[i] = up[i];
+  }
 }
 
 void loop() {
-  int touchValNow = touchRead(T3);
-  Serial.println(touchValNow);  // get value using T0
-  if (touchValNow < touchVal - 1) {
-    //strip.fill(strip.Color(255, 0, 0));
-    strip.show();
-    if (up == 150)
-      for (int i = 150; i >= 90; i--) {
-        strip.fill(strip.Color(0, 0, 0));
-        strip.setPixelColor(i % 5, strip.Color(255, 0, 0));
-        strip.show();
-        servo2.write(i);
-        delay(200);
+  for (int i = 0; i < leafs; i++) {
+    if (upNow[i] == up[i]) {
+      int touchValNow = touchRead(touchPin[i]);
+      //Serial.println(touchValNow);
+      if (touchValNow < touchVal[i] - 1)
+        upTarget[i] = up[i] - moveAngle;
+    }
+    if (upTarget[i] != up[i] || upNow[i] != up[i]) {
+      int step = 1;
+      if (upTarget[i] < upNow[i])
+        step = -1;
+      upNow[i] += step;
+      servo[i].write(upNow[i]);
+      //strip.fill(strip.Color(step > 0 ? 255 : 0, step > 0 ? 0 : 255, 0));
+      for (int j = 0; j < ledInLeaf; j++) {
+        strip.setPixelColor(i * ledInLeaf + j, strip.Color(step > 0 ? 255 : 0, step > 0 ? 0 : 255, 0));
       }
-    up = 90;
-    Serial.println("89");
-  } else {
-    strip.fill(strip.Color(0, 255, 0));
+      if (upTarget[i] == upNow[i])
+        upTarget[i] = up[i];
+    }
     strip.show();
-    if (up == 90)
-      for (int i = 90; i <= 150; i++) {
-        servo2.write(i);
-        delay(50);
-      }
-    up = 150;
-    Serial.println("90");
   }
-
-  delay(100);
-  /* for (int posDegrees = 0; posDegrees <= 5; posDegrees++) {
-      servo1.write(posDegrees);
-      servo2.write(posDegrees);
-      // Serial.println(posDegrees);
-      int color = posDegrees % 5;
-      strip.setPixelColor(color, strip.Color(255, 0, 0));
-      if (color == 4)
-        strip.fill(strip.Color(0, 0, 0));
-      strip.show();
-      delay(20);
-    }
-
-    for (int posDegrees = 5; posDegrees >= 0; posDegrees--) {
-      servo1.write(posDegrees);
-      servo2.write(posDegrees);
-      // Serial.println(posDegrees);
-      delay(20);
-    }
-  }*/
+  delay(50);
 }
