@@ -47,13 +47,13 @@ void setup() {
 
 void loop() {
   for (int i = 0; i < leafs; i++) {
-    if (upNow[i] == up[i]) {
+    if (upNow[i] == up[i]) {  // je nahore, nacti touch
       int touchValNow = touchRead(touchPin[i]);
       //Serial.println(touchValNow);
       if (touchValNow < touchVal[i] - 1)
         upTarget[i] = up[i] - moveAngle;
     }
-    if (upTarget[i] != up[i] || upNow[i] != up[i]) {
+    if (upTarget[i] != up[i] || upNow[i] != up[i]) {  // je v pohybu
       int step = 1;
       if (upTarget[i] < upNow[i])
         step = -1;
@@ -62,11 +62,22 @@ void loop() {
       //strip.fill(strip.Color(step > 0 ? 255 : 0, step > 0 ? 0 : 255, 0));
       for (int j = 0; j < ledInLeaf; j++) {
         strip.setPixelColor(i * ledInLeaf + j, strip.Color(step > 0 ? 255 : 0, step > 0 ? 0 : 255, 0));
+        //strip.setPixelColor(i * ledInLeaf + j, colourTricks());
       }
-      if (upTarget[i] == upNow[i])
-        upTarget[i] = up[i];
+      if (upTarget[i] == upNow[i]) {  //obrat nebo koec
+        if (upTarget[i] == up[i]) {   //konec, zhasni
+          for (int j = 0; j < ledInLeaf; j++) {
+            strip.setPixelColor(i * ledInLeaf + j, strip.Color(0, 0, 0));
+          }
+        } else  //obrat
+          upTarget[i] = up[i];
+      }
     }
     strip.show();
   }
   delay(50);
+}
+
+uint32_t colourTricks() {
+  return strip.Color(0, 255, 0);
 }
